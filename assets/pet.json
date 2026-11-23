@@ -1,0 +1,35 @@
+{
+  "name": "蝙蝠侠",
+  "size": 132,
+  "frames": {
+    "idle": [
+      "idle.png"
+    ],
+    "thinking": [
+      "thinking.png"
+    ]
+  },
+  "fps": {
+    "idle": 3
+  },
+  "sayings": [
+    "阿尔弗雷德！",
+    "正在归档……",
+    "我要夜巡了"
+  ],
+  "thinkingAck": "稍等",
+  "accessories": [
+    "super-shield.png",
+    "grapple-rope.png"
+  ],
+  "canvas": {
+    "width": 512,
+    "height": 512,
+    "crop": [
+      130,
+      84,
+      247,
+      353
+    ]
+  }
+}

@@ -1,0 +1,4 @@
+# DeepSeek Harness bundle layer for the DSH desktop pet.
+- insert:
+    - id: dsh-bat-think
+      name: dsh-bat-think

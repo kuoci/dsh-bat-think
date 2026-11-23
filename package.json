@@ -1,0 +1,60 @@
+{
+  "name": "dsh-bat-think",
+  "version": "1.0.0",
+  "description": "Batman desktop pet for DeepSeek Harness: it works at a laptop, switches to a mouse-in-hand pose with a thought bubble while an Agent runs, rolls a dice for stickers, and shows an API usage card when you click the laptop.",
+  "type": "module",
+  "license": "MIT",
+  "keywords": [
+    "deepseek-harness",
+    "dsh-plugin",
+    "desktop-pet",
+    "mascot",
+    "batman",
+    "desktop",
+    "sticker"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "cordis.patch.yml",
+    "icon.svg",
+    "assets/idle.png",
+    "assets/thinking.png",
+    "assets/pet.json",
+    "assets/accessories",
+    "locale/*.json",
+    "README.md",
+    "README.zh.md",
+    "LICENSE",
+    "NOTICE.md"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-layout"
+      ]
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kuoci/dsh-bat-think.git"
+  },
+  "homepage": "https://github.com/kuoci/dsh-bat-think#readme",
+  "bugs": {
+    "url": "https://github.com/kuoci/dsh-bat-think/issues"
+  }
+}
