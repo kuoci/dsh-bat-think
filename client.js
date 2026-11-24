@@ -61,20 +61,18 @@ window.__ModuleLoader__.load({
     let bridgeTarget = null
     let bridgeDispose = null
     let modelDirectories = null
-    let pluginCtx = null
-
-    /** Platform wallet balance through the account Remote namespace, if present. */
+    /** Platform wallet balance, proxied by the Host half through the account service. */
     async function readAccountBalance() {
       try {
-        const remote = pluginCtx && pluginCtx.remote
-        const account = remote && remote.account
-        if (!account || typeof account.getBalance !== 'function') return null
-        const result = await account.getBalance()
-        if (!result || result.status !== 'ready' || !Array.isArray(result.value) || result.value.length === 0) return null
-        const wallet = result.value[0]
+        const locale = encodeURIComponent(navigator.language || 'zh-CN')
+        const response = await fetch(`${ROUTE}/balance.json?locale=${locale}`, { cache: 'no-cache' })
+        if (!response.ok) return null
+        const json = await response.json()
+        if (!json || json.ok !== true || !Array.isArray(json.wallets) || json.wallets.length === 0) return null
+        const wallet = json.wallets[0]
         if (!wallet || (wallet.currency !== 'CNY' && wallet.currency !== 'USD') || typeof wallet.balance !== 'string') return null
-        const bonus = Array.isArray(result.bonusWallets)
-          ? result.bonusWallets.find((item) => item && item.currency === wallet.currency && Number(item.balance) > 0)
+        const bonus = Array.isArray(json.bonusWallets)
+          ? json.bonusWallets.find((item) => item && item.currency === wallet.currency && Number(item.balance) > 0)
           : null
         return { currency: wallet.currency, balance: wallet.balance, bonus: bonus ? bonus.balance : '' }
       } catch {
@@ -1258,8 +1256,6 @@ window.__ModuleLoader__.load({
     return {
       inject: ['slots'],
       apply(ctx) {
-        pluginCtx = ctx
-        ctx.effect(() => () => { pluginCtx = null }, 'dsh-bat-think: context handle')
         const softGet = typeof ctx.get === 'function' ? ctx.get.bind(ctx) : undefined
         try {
           const soft = softGet ? softGet('sessions') : ctx.sessions

@@ -30,7 +30,41 @@ function finish(res, status, headers = {}) {
   res.end()
 }
 
-async function serveAsset(req, res) {
+function sendJson(res, status, payload) {
+  const body = Buffer.from(JSON.stringify(payload), 'utf8')
+  res.writeHead(status, {
+    'cache-control': 'no-cache',
+    'content-length': String(body.byteLength),
+    'content-type': 'application/json; charset=utf-8',
+    'x-content-type-options': 'nosniff',
+  })
+  res.end(body)
+}
+
+/**
+ * Platform wallet balance through the Host's DeepSeek account service.
+ * Returns `{ ok: false, reason }` when the deployment has no account service or
+ * nobody is signed in, so the client can simply hide the row.
+ */
+async function readBalance(ctx, locale) {
+  try {
+    const account = typeof ctx.get === 'function' ? ctx.get('deepseekAccount') : ctx.deepseekAccount
+    if (!account || typeof account.getBalance !== 'function') return { ok: false, reason: 'no-account' }
+    const client = {
+      version: '1.0.3',
+      locale: typeof locale === 'string' && locale.length > 0 ? locale : 'zh-CN',
+      timezoneOffsetSeconds: -new Date().getTimezoneOffset() * 60,
+    }
+    const result = await account.getBalance(client)
+    if (!result) return { ok: false, reason: 'signed-out' }
+    if (result.status !== 'ready' || !Array.isArray(result.value)) return { ok: false, reason: 'unavailable' }
+    return { ok: true, wallets: result.value, bonusWallets: Array.isArray(result.bonusWallets) ? result.bonusWallets : [] }
+  } catch {
+    return { ok: false, reason: 'error' }
+  }
+}
+
+async function serveAsset(req, res, ctx) {
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     finish(res, 405, { allow: 'GET, HEAD' })
     return
@@ -45,6 +79,12 @@ async function serveAsset(req, res) {
   }
 
   const suffix = pathname === ROUTE || pathname === `${ROUTE}/` ? 'pet.json' : pathname.slice(ROUTE.length + 1)
+
+  if (suffix === 'balance.json') {
+    const locale = new URL(req.url ?? ROUTE, 'http://dsh.local').searchParams.get('locale') || ''
+    sendJson(res, 200, await readBalance(ctx, locale))
+    return
+  }
 
   // Live listing of the accessory folder: dropping a PNG in is enough, no manifest.
   if (suffix === 'accessories/index.json') {
@@ -109,6 +149,6 @@ export function apply(ctx) {
   ctx.effect(() => ctx.webServer.register({
     kind: 'prefix',
     path: ROUTE,
-    handler: serveAsset,
+    handler: (req, res) => serveAsset(req, res, ctx),
   }), 'dsh-bat-think: artwork route')
 }
