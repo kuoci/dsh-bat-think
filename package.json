@@ -1,7 +1,7 @@
 {
   "name": "dsh-bat-think",
-  "version": "1.0.0",
-  "description": "Batman desktop pet for DeepSeek Harness: it works at a laptop, switches to a mouse-in-hand pose with a thought bubble while an Agent runs, rolls a dice for stickers, and shows an API usage card when you click the laptop.",
+  "version": "1.0.1",
+  "description": "Batman desktop pet for DeepSeek Harness: it works at a laptop, switches to a mouse-in-hand pose with a thought bubble while an Agent runs, blinks in the bare-face variant (triple-click to swap the helmet), rolls a dice for stickers, and shows an API usage card when you click the laptop.",
   "type": "module",
   "license": "MIT",
   "keywords": [
@@ -28,12 +28,14 @@
     "cordis.patch.yml",
     "icon.svg",
     "assets/idle.png",
+    "assets/idle-bare.png",
     "assets/thinking.png",
+    "assets/thinking-bare.png",
     "assets/pet.json",
+    "assets/eyes",
     "assets/accessories",
     "locale/*.json",
     "README.md",
-    "README.zh.md",
     "LICENSE",
     "NOTICE.md"
   ],

@@ -1,6 +1,6 @@
 {
   "meta": {
     "title": "Batman desktop pet",
-    "description": "Shows a draggable Batman in the bottom-right corner of the DSH window: it works at its laptop normally, and while an Agent is running it switches to the mouse-in-hand frame with a bouncing three-dot thought bubble, then reverts when the run ends. Clicking while idle says one of three lines; clicking while the Agent runs hides the bubble and says a short acknowledgment. Clicking the laptop opens an API usage card (model, output/input/cache-read tokens and context occupancy). The dice in the hover toolbar puts a random sticker on the pet; stickers use the artwork's canvas coordinates, breathe, drag and scale with it, and a click on their pixels removes them. Every picture comes from the plugin's assets/ folder, so replacing idle.png and thinking.png swaps in your own drawings."
+    "description": "Shows a draggable Batman in the bottom-right corner of the DSH window: it works at its laptop, switches to a mouse-in-hand frame with a thought bubble while an Agent runs, and blinks naturally in the bare-face variant (triple-click to take the helmet off or put it back). Clicking it while idle says one of three lines; clicking the laptop opens an API usage card; the dice puts a random sticker on the current variant — each variant has its own stickers, placed by the artwork's canvas coordinates and following its breathing, drag and scale."
   }
 }

@@ -50,11 +50,23 @@ async function serveAsset(req, res) {
   if (suffix === 'accessories/index.json') {
     let files = []
     try {
-      const entries = await readdir(resolve(ASSET_ROOT, 'accessories'), { withFileTypes: true })
-      files = entries
-        .filter((entry) => entry.isFile() && /\.(png|webp|gif|svg)$/i.test(entry.name))
-        .map((entry) => entry.name)
-        .sort((left, right) => left.localeCompare(right))
+      // One level deep: accessories/helmet/*.png and accessories/bare/*.png.
+      // The folder name is the variant the sticker belongs to.
+      const root = resolve(ASSET_ROOT, 'accessories')
+      const image = /\.(png|webp|gif|svg)$/i
+      const entries = await readdir(root, { withFileTypes: true })
+      for (const entry of entries) {
+        if (entry.isFile() && image.test(entry.name)) {
+          files.push(entry.name)
+          continue
+        }
+        if (!entry.isDirectory()) continue
+        const nested = await readdir(resolve(root, entry.name), { withFileTypes: true })
+        for (const child of nested) {
+          if (child.isFile() && image.test(child.name)) files.push(`${entry.name}/${child.name}`)
+        }
+      }
+      files.sort((left, right) => left.localeCompare(right))
     } catch {
       files = []
     }

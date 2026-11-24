@@ -1,13 +1,26 @@
 {
   "name": "蝙蝠侠",
-  "size": 132,
-  "frames": {
-    "idle": [
-      "idle.png"
-    ],
-    "thinking": [
-      "thinking.png"
-    ]
+  "size": 168,
+  "canvas": {
+    "width": 512,
+    "height": 512,
+    "crop": [92, 76, 316, 359]
+  },
+  "hotspot": [148, 318, 214, 100],
+  "variants": {
+    "helmet": {
+      "idle": ["idle.png"],
+      "thinking": ["thinking.png"]
+    },
+    "bare": {
+      "idle": ["idle-bare.png"],
+      "thinking": ["thinking-bare.png"],
+      "eyes": {
+        "open": "eyes/open.png",
+        "half": "eyes/half.png",
+        "closed": "eyes/closed.png"
+      }
+    }
   },
   "fps": {
     "idle": 3
@@ -18,18 +31,14 @@
     "我要夜巡了"
   ],
   "thinkingAck": "稍等",
-  "accessories": [
-    "super-shield.png",
-    "grapple-rope.png"
-  ],
-  "canvas": {
-    "width": 512,
-    "height": 512,
-    "crop": [
-      130,
-      84,
-      247,
-      353
+  "accessories": {
+    "helmet": [
+      "helmet/super-shield.png",
+      "helmet/grapple-rope.png"
+    ],
+    "bare": [
+      "bare/red-flower.png",
+      "bare/hair-tufts.png"
     ]
   }
 }

@@ -22,9 +22,11 @@ window.__ModuleLoader__.load({
     const KEY_COLLAPSED = 'dsh-bat-think:collapsed'
     const KEY_GREETED = 'dsh-bat-think:greeted'
     const KEY_ACCESSORY = 'dsh-bat-think:accessory'
+    const KEY_VARIANT = 'dsh-bat-think:variant'
+    const KEY_CANVAS_WIDTH = 'dsh-bat-think:canvas-width'
     const MIN_SIZE = 96
     const MAX_SIZE = 320
-    const DEFAULT_SIZE = 132
+    const DEFAULT_SIZE = 168
     const DEFAULT_RATIO = 1.42
     const EDGE_RIGHT = 24
     const EDGE_BOTTOM = 16
@@ -35,12 +37,20 @@ window.__ModuleLoader__.load({
     const FALLBACK = {
       name: '蝙蝠侠',
       size: DEFAULT_SIZE,
-      frames: { idle: ['idle.png'], thinking: ['thinking.png'] },
+      canvas: { width: 512, height: 512, crop: [92, 76, 316, 359] },
+      hotspot: [148, 318, 214, 100],
+      variants: {
+        helmet: { idle: ['idle.png'], thinking: ['thinking.png'] },
+        bare: {
+          idle: ['idle-bare.png'],
+          thinking: ['thinking-bare.png'],
+          eyes: { open: 'eyes/open.png', half: 'eyes/half.png', closed: 'eyes/closed.png' },
+        },
+      },
       fps: { idle: 3 },
       sayings: ['阿尔弗雷德！', '正在归档……', '我要夜巡了'],
       thinkingAck: '稍等',
-      accessories: [],
-      canvas: { width: 512, height: 512, crop: [130, 84, 247, 353] },
+      accessories: { helmet: [], bare: [] },
     }
 
     // The pet watches the session list so the thought bubble follows the Agent.
@@ -116,6 +126,11 @@ window.__ModuleLoader__.load({
   -webkit-user-drag: none;
 }
 .dsh-bat-think-img:active { cursor: grabbing; }
+.dsh-bat-think-eyes {
+  position: absolute;
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
 @keyframes dsh-bat-think-breathe {
   0%, 100% { transform: translateY(0) scale(1); }
   50% { transform: translateY(-3px) scale(1.02); }
@@ -471,18 +486,30 @@ window.__ModuleLoader__.load({
     }
 
     function mergeManifest(base, extra) {
-      const frames = { ...(base.frames || {}) }
-      for (const [name, list] of Object.entries(extra.frames || {})) {
-        if (Array.isArray(list) && list.length > 0) frames[name] = list.map(String)
+      const variants = { ...(base.variants || {}) }
+      for (const [name, definition] of Object.entries(extra.variants || {})) {
+        variants[name] = { ...(variants[name] || {}), ...definition }
       }
+      const accessories = extra.accessories && !Array.isArray(extra.accessories)
+        ? { ...(base.accessories || {}), ...extra.accessories }
+        : (base.accessories || { helmet: [], bare: [] })
       return {
         ...base,
         ...extra,
-        frames,
+        variants,
+        accessories,
         fps: { ...(base.fps || {}), ...(extra.fps || {}) },
         sayings: Array.isArray(extra.sayings) && extra.sayings.length > 0
           ? extra.sayings.map(String)
           : base.sayings,
+      }
+    }
+
+    function readVariant() {
+      try {
+        return localStorage.getItem(KEY_VARIANT) === 'bare' ? 'bare' : 'helmet'
+      } catch {
+        return 'helmet'
       }
     }
 
@@ -492,6 +519,8 @@ window.__ModuleLoader__.load({
 
       const [manifest, setManifest] = useState(FALLBACK)
       const [bubble, setBubble] = useState('')
+      const [variant, setVariant] = useState(readVariant)
+      const [eyeFrame, setEyeFrame] = useState('open')
       const [position, setPosition] = useState(null)
       const [size, setSize] = useState(() => clampSize(readNumber(KEY_SIZE, DEFAULT_SIZE)))
       const [ratio, setRatio] = useState(DEFAULT_RATIO)
@@ -596,10 +625,13 @@ window.__ModuleLoader__.load({
         return () => { try { dispose() } catch {} }
       }, [mainSessionId, modelService])
 
-      const availableAccessories = useMemo(() => {
-        if (accessoryList.length > 0) return accessoryList
-        return Array.isArray(manifest.accessories) ? manifest.accessories.map(String) : []
-      }, [accessoryList, manifest])
+      const variantAccessories = useMemo(() => {
+        const prefix = `${variant}/`
+        const fromIndex = accessoryList.filter((file) => String(file).startsWith(prefix))
+        if (fromIndex.length > 0) return fromIndex
+        const map = manifest.accessories && !Array.isArray(manifest.accessories) ? manifest.accessories : {}
+        return Array.isArray(map[variant]) ? map[variant].map(String) : []
+      }, [accessoryList, manifest, variant])
 
       // Accessories are discovered from the folder; `pet.json` lists the same
       // names as a fallback for a Host that has not reloaded yet.
@@ -616,13 +648,13 @@ window.__ModuleLoader__.load({
       }, [])
 
       useEffect(() => {
-        if (availableAccessories.length === 0) return
+        if (variantAccessories.length === 0) return
         setAccessory((current) => {
-          if (!current || availableAccessories.includes(current.file)) return current
+          if (!current || variantAccessories.includes(current.file)) return current
           writeAccessory(null)
           return null
         })
-      }, [availableAccessories])
+      }, [variantAccessories])
 
       // Bounding box and alpha mask of the current accessory, for placement and
       // for "click the pixels, not the box" removal.
@@ -689,10 +721,23 @@ window.__ModuleLoader__.load({
           .then((response) => (response.ok ? response.json() : null))
           .then((json) => {
             if (cancelled || !json) return
-            setManifest(mergeManifest(FALLBACK, json))
+            const merged = mergeManifest(FALLBACK, json)
+            setManifest(merged)
+            const cropWidth = merged.canvas && Array.isArray(merged.canvas.crop) ? Number(merged.canvas.crop[2]) : 0
             let stored = 0
             try { stored = Number(localStorage.getItem(KEY_SIZE)) } catch {}
-            if (!Number.isFinite(stored) || stored <= 0) setSize(clampSize(json.size))
+            if (!Number.isFinite(stored) || stored <= 0) {
+              setSize(clampSize(json.size))
+            } else if (cropWidth > 0) {
+              // The shared canvas got wider when the bare variant arrived: scale
+              // the saved size once so the pet keeps its on-screen size.
+              let previousWidth = readNumber(KEY_CANVAS_WIDTH, 0)
+              if (!previousWidth && stored > 0) previousWidth = 247
+              if (previousWidth > 0 && Math.abs(previousWidth - cropWidth) > 1) {
+                setSize((current) => clampSize(Math.round(current * (cropWidth / previousWidth))))
+              }
+            }
+            if (cropWidth > 0) writeSetting(KEY_CANVAS_WIDTH, String(cropWidth))
           })
           .catch((error) => console.warn('[dsh-bat-think] pet.json could not be loaded', error))
         return () => { cancelled = true }
@@ -725,14 +770,19 @@ window.__ModuleLoader__.load({
       }, [size, ratio])
 
       const frames = useMemo(() => {
-        const all = manifest.frames || {}
-        const list = thinking && Array.isArray(all.thinking) && all.thinking.length > 0 ? all.thinking : all.idle
+        const definition = (manifest.variants && manifest.variants[variant]) || {}
+        const list = thinking && Array.isArray(definition.thinking) && definition.thinking.length > 0
+          ? definition.thinking
+          : definition.idle
         return Array.isArray(list) && list.length > 0 ? list : ['idle.png']
-      }, [manifest, thinking])
+      }, [manifest, thinking, variant])
 
       // Warm both frames so switching to the working picture does not flicker.
       useEffect(() => {
-        const files = [].concat(manifest.frames.idle || [], manifest.frames.thinking || [])
+        const files = []
+        for (const definition of Object.values(manifest.variants || {})) {
+          files.push(...(definition.idle || []), ...(definition.thinking || []), ...Object.values(definition.eyes || {}))
+        }
         for (const file of files) {
           const image = new Image()
           image.src = `${ROUTE}/${String(file).split('/').map(encodeURIComponent).join('/')}`
@@ -749,6 +799,24 @@ window.__ModuleLoader__.load({
         }, Math.max(90, 1000 / fps))
         return () => clearInterval(timer)
       }, [frames, manifest, thinking])
+
+      // Blink only in the bare-face variant: the eye layer steps open → half →
+      // closed → half → open on a loose timer.
+      useEffect(() => {
+        if (variant !== 'bare') { setEyeFrame('open'); return undefined }
+        const sequence = ['open', 'half', 'closed', 'half', 'open']
+        let step = 0
+        let timer = 0
+        setEyeFrame('open')
+        const tick = () => {
+          step = (step + 1) % sequence.length
+          if (alive.current) setEyeFrame(sequence[step])
+          const wait = step === 0 ? 2800 + Math.random() * 3800 : 95
+          timer = window.setTimeout(tick, wait)
+        }
+        timer = window.setTimeout(tick, 2800 + Math.random() * 3800)
+        return () => window.clearTimeout(timer)
+      }, [variant])
 
       const say = (text) => {
         if (!text) return
@@ -817,8 +885,41 @@ window.__ModuleLoader__.load({
         say(lines[Math.floor(Math.random() * lines.length)])
       }
 
+      const toggleVariant = () => {
+        const next = variant === 'bare' ? 'helmet' : 'bare'
+        setVariant(next)
+        try { localStorage.setItem(KEY_VARIANT, next) } catch {}
+        setAccessory(null)
+        writeAccessory(null)
+        setBump(true)
+        window.clearTimeout(bumpTimer.current)
+        bumpTimer.current = window.setTimeout(() => {
+          if (alive.current) setBump(false)
+        }, 1300)
+        say(next === 'bare' ? '摘下面罩' : '戴上面罩')
+      }
+
+      // Three quick clicks swap the helmet, so a single click waits briefly.
+      const clickRef = useRef({ count: 0, last: 0, timer: 0 })
+      const onPetClick = () => {
+        const now = Date.now()
+        const state = clickRef.current
+        if (now - state.last > 700) state.count = 0
+        state.last = now
+        state.count += 1
+        window.clearTimeout(state.timer)
+        if (state.count >= 3) {
+          state.count = 0
+          toggleVariant()
+          return
+        }
+        state.timer = window.setTimeout(() => {
+          if (alive.current) react()
+        }, 300)
+      }
+
       const rollAccessory = () => {
-        const list = availableAccessories
+        const list = variantAccessories
         if (list.length === 0) {
           say('还没有配件，把 PNG 放进 assets/accessories/ 就行')
           return
@@ -885,7 +986,7 @@ window.__ModuleLoader__.load({
             return current
           })
         } else {
-          react()
+          onPetClick()
         }
       }
 
@@ -907,7 +1008,7 @@ window.__ModuleLoader__.load({
       }
 
       const current = frames[Math.min(frame, frames.length - 1)] || 'idle.png'
-      const src = `${ROUTE}/${String(current).split('/').map(encodeURIComponent).join('/')}`
+      const src = accessoryUrl(current)
       const showThink = thinking && !thinkPaused && !bubble && !usageOpen
       const centreX = position.x + size / 2
       const viewportWidth = window.innerWidth || 1024
@@ -919,12 +1020,42 @@ window.__ModuleLoader__.load({
       const canvasSpec = manifest.canvas && Array.isArray(manifest.canvas.crop) && manifest.canvas.crop.length === 4
         ? manifest.canvas
         : null
+      const crop = canvasSpec ? canvasSpec.crop.map(Number) : [0, 0, 247, 353]
+      const unit = size / (crop[2] || 1)
+      const canvasWidth = canvasSpec ? Number(canvasSpec.width) || 512 : 512
+      const canvasHeight = canvasSpec ? Number(canvasSpec.height) || 512 : 512
+
+      const eyes = variant === 'bare' && manifest.variants && manifest.variants.bare
+        ? manifest.variants.bare.eyes
+        : null
+      const eyeFile = eyes ? (eyes[eyeFrame] || eyes.open || '') : ''
+      const eyesLayer = !missing && eyeFile
+        ? h('img', {
+            className: 'dsh-bat-think-eyes',
+            src: accessoryUrl(eyeFile),
+            alt: '',
+            draggable: false,
+            style: {
+              left: `${-crop[0] * unit}px`,
+              top: `${-crop[1] * unit}px`,
+              width: `${canvasWidth * unit}px`,
+              height: `${canvasHeight * unit}px`,
+            },
+          })
+        : null
+
+      const hotspotPixels = Array.isArray(manifest.hotspot) && manifest.hotspot.length === 4 ? manifest.hotspot.map(Number) : null
+      const hotspotStyle = hotspotPixels
+        ? {
+            left: `${(hotspotPixels[0] - crop[0]) * unit}px`,
+            top: `${(hotspotPixels[1] - crop[1]) * unit}px`,
+            width: `${hotspotPixels[2] * unit}px`,
+            height: `${hotspotPixels[3] * unit}px`,
+          }
+        : { left: '8%', top: '69%', width: '52%', height: '30%' }
+
       const accessoryLayer = accessory && accMeta && canvasSpec
         ? (() => {
-            const crop = canvasSpec.crop.map(Number)
-            const unit = size / (crop[2] || 1)
-            const canvasWidth = Number(canvasSpec.width) || 512
-            const canvasHeight = Number(canvasSpec.height) || 512
             return h('div', {
               className: 'dsh-bat-think-accessory',
               style: {
@@ -1016,12 +1147,13 @@ window.__ModuleLoader__.load({
               },
               onError: () => setMissing(true),
             }),
+        eyesLayer,
         missing
           ? null
           : h('button', {
               type: 'button',
               className: 'dsh-bat-think-laptop',
-              style: { left: '8%', top: '69%', width: '52%', height: '30%' },
+              style: hotspotStyle,
               title: 'API 用量',
               'aria-label': '查看 API 用量',
               onPointerDown: stopTool,
