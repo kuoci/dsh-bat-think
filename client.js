@@ -528,6 +528,7 @@ window.__ModuleLoader__.load({
         try { return localStorage.getItem(KEY_COLLAPSED) === '1' } catch { return false }
       })
       const [missing, setMissing] = useState(false)
+      const [loadAttempt, setLoadAttempt] = useState(0)
       const [frame, setFrame] = useState(0)
       const [bump, setBump] = useState(false)
       const [thinkPaused, setThinkPaused] = useState(false)
@@ -885,6 +886,11 @@ window.__ModuleLoader__.load({
         say(lines[Math.floor(Math.random() * lines.length)])
       }
 
+      useEffect(() => {
+        setMissing(false)
+        setLoadAttempt(0)
+      }, [variant])
+
       const toggleVariant = () => {
         const next = variant === 'bare' ? 'helmet' : 'bare'
         setVariant(next)
@@ -1008,7 +1014,7 @@ window.__ModuleLoader__.load({
       }
 
       const current = frames[Math.min(frame, frames.length - 1)] || 'idle.png'
-      const src = accessoryUrl(current)
+      const src = loadAttempt > 0 ? `${accessoryUrl(current)}?retry=${loadAttempt}` : accessoryUrl(current)
       const showThink = thinking && !thinkPaused && !bubble && !usageOpen
       const centreX = position.x + size / 2
       const viewportWidth = window.innerWidth || 1024
@@ -1145,7 +1151,17 @@ window.__ModuleLoader__.load({
                   setRatio((value) => (Math.abs(value - next) > 0.01 ? next : value))
                 }
               },
-              onError: () => setMissing(true),
+              onError: () => {
+                // A file swapped on disk can 404 for a moment; try twice before
+                // telling the user the artwork is missing.
+                if (loadAttempt < 2) {
+                  window.setTimeout(() => {
+                    if (alive.current) setLoadAttempt((attempt) => attempt + 1)
+                  }, 800)
+                  return
+                }
+                setMissing(true)
+              },
             }),
         eyesLayer,
         missing
