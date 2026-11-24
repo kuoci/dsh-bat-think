@@ -683,6 +683,17 @@ window.__ModuleLoader__.load({
       }, [])
 
       useEffect(() => {
+        if (!usageOpen) return undefined
+        let cancelled = false
+        const load = () => {
+          readAccountBalance().then((next) => { if (!cancelled) setBalance(next) })
+        }
+        load()
+        const timer = window.setInterval(load, 60000)
+        return () => { cancelled = true; window.clearInterval(timer) }
+      }, [usageOpen])
+
+      useEffect(() => {
         if (variantAccessories.length === 0) return
         setAccessory((current) => {
           if (!current || variantAccessories.includes(current.file)) return current
