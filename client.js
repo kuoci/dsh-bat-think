@@ -532,6 +532,14 @@ window.__ModuleLoader__.load({
       const [loadAttempt, setLoadAttempt] = useState(0)
       const [failedFile, setFailedFile] = useState('')
       const [failedInfo, setFailedInfo] = useState('')
+      const [blobs, setBlobs] = useState({})
+      const blobsRef = useRef(blobs)
+      blobsRef.current = blobs
+      useEffect(() => () => {
+        for (const url of Object.values(blobsRef.current)) {
+          try { URL.revokeObjectURL(url) } catch {}
+        }
+      }, [])
       const [frame, setFrame] = useState(0)
       const [bump, setBump] = useState(false)
       const [thinkPaused, setThinkPaused] = useState(false)
@@ -1017,7 +1025,8 @@ window.__ModuleLoader__.load({
       }
 
       const current = frames[Math.min(frame, frames.length - 1)] || 'idle.png'
-      const src = `${accessoryUrl(current)}?v=${BUILD}${loadAttempt > 0 ? `&retry=${loadAttempt}` : ''}`
+      const directSrc = `${accessoryUrl(current)}?v=${BUILD}${loadAttempt > 0 ? `&retry=${loadAttempt}` : ''}`
+      const src = blobs[current] || directSrc
       const showThink = thinking && !thinkPaused && !bubble && !usageOpen
       const centreX = position.x + size / 2
       const viewportWidth = window.innerWidth || 1024
@@ -1157,16 +1166,34 @@ window.__ModuleLoader__.load({
                 }
               },
               onError: () => {
-                // A file swapped on disk can 404 for a moment; try twice before
-                // telling the user the artwork is missing.
+                // A file swapped on disk can 404 for a moment; try twice, then
+                // try the same bytes through fetch() as a blob URL, and only
+                // then tell the user the artwork is missing.
                 if (loadAttempt < 2) {
                   window.setTimeout(() => {
                     if (alive.current) setLoadAttempt((attempt) => attempt + 1)
                   }, 800)
                   return
                 }
+                if (!blobs[current]) {
+                  fetch(accessoryUrl(current), { cache: 'no-store' })
+                    .then((response) => {
+                      if (!response.ok) throw new Error(`HTTP ${response.status}`)
+                      return response.blob()
+                    })
+                    .then((blob) => {
+                      const url = URL.createObjectURL(blob)
+                      setBlobs((map) => ({ ...map, [current]: url }))
+                    })
+                    .catch((error) => {
+                      setFailedFile(current)
+                      setFailedInfo(`${window.location.origin}${directSrc} · ${error && error.message ? error.message : 'fetch failed'}`)
+                      setMissing(true)
+                    })
+                  return
+                }
                 setFailedFile(current)
-                setFailedInfo(`${window.location.origin}${src}`)
+                setFailedInfo(`${window.location.origin}${directSrc}`)
                 setMissing(true)
               },
             }),
