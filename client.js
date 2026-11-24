@@ -531,6 +531,7 @@ window.__ModuleLoader__.load({
       const [missing, setMissing] = useState(false)
       const [loadAttempt, setLoadAttempt] = useState(0)
       const [failedFile, setFailedFile] = useState('')
+      const [failedInfo, setFailedInfo] = useState('')
       const [frame, setFrame] = useState(0)
       const [bump, setBump] = useState(false)
       const [thinkPaused, setThinkPaused] = useState(false)
@@ -1135,7 +1136,8 @@ window.__ModuleLoader__.load({
       bubble && !usageOpen ? h('div', { className: `dsh-bat-think-bubble${bubbleEdge}`, role: 'status' }, bubble) : null,
       missing
         ? h('div', { className: `dsh-bat-think-bubble${bubbleEdge}` },
-            `立绘没找到：${failedFile || current}（${manifest.variants && manifest.variants[variant] ? variant : '?'}）`)
+            h('div', null, `立绘没找到：${failedFile || current}（${manifest.variants && manifest.variants[variant] ? variant : '?'}）`),
+            failedInfo ? h('div', { style: { fontSize: '10px', opacity: 0.75, wordBreak: 'break-all', marginTop: '4px' } }, failedInfo) : null)
         : null,
       h('div', { className: `dsh-bat-think-body${bump ? ' is-bump' : ''}` },
         missing
@@ -1164,6 +1166,7 @@ window.__ModuleLoader__.load({
                   return
                 }
                 setFailedFile(current)
+                setFailedInfo(`${window.location.origin}${src}`)
                 setMissing(true)
               },
             }),
