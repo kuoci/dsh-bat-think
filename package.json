@@ -1,6 +1,6 @@
 {
   "name": "dsh-bat-think",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Batman desktop pet for DeepSeek Harness: it works at a laptop, switches to a mouse-in-hand pose with a thought bubble while an Agent runs, blinks in the bare-face variant (triple-click to swap the helmet), rolls a dice for stickers, and shows an API usage card when you click the laptop.",
   "type": "module",
   "license": "MIT",

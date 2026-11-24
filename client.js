@@ -61,6 +61,26 @@ window.__ModuleLoader__.load({
     let bridgeTarget = null
     let bridgeDispose = null
     let modelDirectories = null
+    let pluginCtx = null
+
+    /** Platform wallet balance through the account Remote namespace, if present. */
+    async function readAccountBalance() {
+      try {
+        const remote = pluginCtx && pluginCtx.remote
+        const account = remote && remote.account
+        if (!account || typeof account.getBalance !== 'function') return null
+        const result = await account.getBalance()
+        if (!result || result.status !== 'ready' || !Array.isArray(result.value) || result.value.length === 0) return null
+        const wallet = result.value[0]
+        if (!wallet || (wallet.currency !== 'CNY' && wallet.currency !== 'USD') || typeof wallet.balance !== 'string') return null
+        const bonus = Array.isArray(result.bonusWallets)
+          ? result.bonusWallets.find((item) => item && item.currency === wallet.currency && Number(item.balance) > 0)
+          : null
+        return { currency: wallet.currency, balance: wallet.balance, bonus: bonus ? bonus.balance : '' }
+      } catch {
+        return null
+      }
+    }
     const modelListeners = new Set()
     function setModelDirectories(next) {
       if (modelDirectories === next) return
@@ -613,6 +633,7 @@ window.__ModuleLoader__.load({
         setModelService(modelDirectories)
         return () => { modelListeners.delete(listener) }
       }, [])
+      const [balance, setBalance] = useState(null)
       const [modelLabel, setModelLabel] = useState('')
       useEffect(() => {
         setModelLabel('')
@@ -1130,6 +1151,12 @@ window.__ModuleLoader__.load({
             modelLabel
               ? h('div', { className: 'dsh-bat-think-usage-row' }, h('span', null, '模型'), h('b', { title: modelLabel }, modelLabel))
               : null,
+            balance
+              ? h('div', { className: 'dsh-bat-think-usage-row' },
+                  h('span', null, '余额'),
+                  h('b', { title: balance.bonus ? `赠送余额 ${balance.bonus}` : '' },
+                    `${balance.currency === 'USD' ? '$' : '¥'}${balance.balance}${balance.bonus ? `（含赠 ${balance.bonus}）` : ''}`))
+              : null,
             hasUsage
               ? [
                   h('div', { key: 'out', className: 'dsh-bat-think-usage-row' }, h('span', null, '输出'), h('b', null, formatCount(usage && usage.outputTokens))),
@@ -1231,6 +1258,8 @@ window.__ModuleLoader__.load({
     return {
       inject: ['slots'],
       apply(ctx) {
+        pluginCtx = ctx
+        ctx.effect(() => () => { pluginCtx = null }, 'dsh-bat-think: context handle')
         const softGet = typeof ctx.get === 'function' ? ctx.get.bind(ctx) : undefined
         try {
           const soft = softGet ? softGet('sessions') : ctx.sessions

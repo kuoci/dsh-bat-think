@@ -1,6 +1,6 @@
 {
   "meta": {
     "title": "Batman desktop pet",
-    "description": "Shows a draggable Batman in the bottom-right corner of the DSH window: it works at its laptop, switches to a mouse-in-hand frame with a thought bubble while an Agent runs, and blinks naturally in the bare-face variant (triple-click to take the helmet off or put it back). Clicking it while idle says one of three lines; clicking the laptop opens an API usage card; the dice puts a random sticker on the current variant — each variant has its own stickers, placed by the artwork's canvas coordinates and following its breathing, drag and scale."
+    "description": "Shows a draggable Batman in the bottom-right corner of the DSH window: it works at its laptop, switches to a mouse-in-hand frame with a thought bubble while an Agent runs, and blinks naturally in the bare-face variant (triple-click to take the helmet off or put it back). Clicking it while idle says one of three lines; clicking the laptop opens an API usage card with the platform wallet balance; the dice puts a random sticker on the current variant — each variant has its own stickers, placed by the artwork's canvas coordinates and following its breathing, drag and scale."
   }
 }
