@@ -420,6 +420,10 @@ window.__ModuleLoader__.load({
       }
     }
 
+    function assetUrl(file) {
+      return `${ROUTE}/${String(file).split('/').map(encodeURIComponent).join('/')}`
+    }
+
     function accessoryUrl(file) {
       return `${ROUTE}/accessories/${String(file).split('/').map(encodeURIComponent).join('/')}`
     }
@@ -1025,7 +1029,7 @@ window.__ModuleLoader__.load({
       }
 
       const current = frames[Math.min(frame, frames.length - 1)] || 'idle.png'
-      const directSrc = `${accessoryUrl(current)}?v=${BUILD}${loadAttempt > 0 ? `&retry=${loadAttempt}` : ''}`
+      const directSrc = `${assetUrl(current)}?v=${BUILD}${loadAttempt > 0 ? `&retry=${loadAttempt}` : ''}`
       const src = blobs[current] || directSrc
       const showThink = thinking && !thinkPaused && !bubble && !usageOpen
       const centreX = position.x + size / 2
@@ -1050,7 +1054,7 @@ window.__ModuleLoader__.load({
       const eyesLayer = !missing && eyeFile
         ? h('img', {
             className: 'dsh-bat-think-eyes',
-            src: accessoryUrl(eyeFile),
+            src: assetUrl(eyeFile),
             alt: '',
             draggable: false,
             style: {
@@ -1176,7 +1180,7 @@ window.__ModuleLoader__.load({
                   return
                 }
                 if (!blobs[current]) {
-                  fetch(accessoryUrl(current), { cache: 'no-store' })
+                  fetch(assetUrl(current), { cache: 'no-store' })
                     .then((response) => {
                       if (!response.ok) throw new Error(`HTTP ${response.status}`)
                       return response.blob()
