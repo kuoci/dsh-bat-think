@@ -23,6 +23,7 @@ window.__ModuleLoader__.load({
     const KEY_GREETED = 'dsh-bat-think:greeted'
     const KEY_ACCESSORY = 'dsh-bat-think:accessory'
     const KEY_VARIANT = 'dsh-bat-think:variant'
+    const BUILD = '1.0.1'
     const KEY_CANVAS_WIDTH = 'dsh-bat-think:canvas-width'
     const MIN_SIZE = 96
     const MAX_SIZE = 320
@@ -529,6 +530,7 @@ window.__ModuleLoader__.load({
       })
       const [missing, setMissing] = useState(false)
       const [loadAttempt, setLoadAttempt] = useState(0)
+      const [failedFile, setFailedFile] = useState('')
       const [frame, setFrame] = useState(0)
       const [bump, setBump] = useState(false)
       const [thinkPaused, setThinkPaused] = useState(false)
@@ -1014,7 +1016,7 @@ window.__ModuleLoader__.load({
       }
 
       const current = frames[Math.min(frame, frames.length - 1)] || 'idle.png'
-      const src = loadAttempt > 0 ? `${accessoryUrl(current)}?retry=${loadAttempt}` : accessoryUrl(current)
+      const src = `${accessoryUrl(current)}?v=${BUILD}${loadAttempt > 0 ? `&retry=${loadAttempt}` : ''}`
       const showThink = thinking && !thinkPaused && !bubble && !usageOpen
       const centreX = position.x + size / 2
       const viewportWidth = window.innerWidth || 1024
@@ -1132,7 +1134,8 @@ window.__ModuleLoader__.load({
         : null,
       bubble && !usageOpen ? h('div', { className: `dsh-bat-think-bubble${bubbleEdge}`, role: 'status' }, bubble) : null,
       missing
-        ? h('div', { className: `dsh-bat-think-bubble${bubbleEdge}` }, '立绘没找到：请把图片放进插件目录的 assets/ 里')
+        ? h('div', { className: `dsh-bat-think-bubble${bubbleEdge}` },
+            `立绘没找到：${failedFile || current}（${manifest.variants && manifest.variants[variant] ? variant : '?'}）`)
         : null,
       h('div', { className: `dsh-bat-think-body${bump ? ' is-bump' : ''}` },
         missing
@@ -1160,6 +1163,7 @@ window.__ModuleLoader__.load({
                   }, 800)
                   return
                 }
+                setFailedFile(current)
                 setMissing(true)
               },
             }),
