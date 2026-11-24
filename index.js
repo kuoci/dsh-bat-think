@@ -51,7 +51,7 @@ async function readBalance(ctx, locale) {
     const account = typeof ctx.get === 'function' ? ctx.get('deepseekAccount') : ctx.deepseekAccount
     if (!account || typeof account.getBalance !== 'function') return { ok: false, reason: 'no-account' }
     const client = {
-      version: '1.0.4',
+      version: '1.0.5',
       locale: typeof locale === 'string' && locale.length > 0 ? locale : 'zh-CN',
       timezoneOffsetSeconds: -new Date().getTimezoneOffset() * 60,
     }

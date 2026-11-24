@@ -490,6 +490,11 @@ window.__ModuleLoader__.load({
       }
     }
 
+    function formatMoney(value) {
+      const number = Number(value)
+      return Number.isFinite(number) ? number.toFixed(2) : String(value)
+    }
+
     function formatCount(value) {
       return typeof value === 'number' && Number.isFinite(value) ? value.toLocaleString('en-US') : '—'
     }
@@ -1164,7 +1169,7 @@ window.__ModuleLoader__.load({
               ? h('div', { className: 'dsh-bat-think-usage-row' },
                   h('span', null, '余额'),
                   h('b', { title: balance.bonus ? `赠送余额 ${balance.bonus}` : '' },
-                    `${balance.currency === 'USD' ? '$' : '¥'}${balance.balance}${balance.bonus ? `（含赠 ${balance.bonus}）` : ''}`))
+                    `${balance.currency === 'USD' ? '$' : '¥'}${formatMoney(balance.balance)}${balance.bonus ? `（含赠 ${formatMoney(balance.bonus)}）` : ''}`))
               : null,
             hasUsage
               ? [
